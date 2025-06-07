@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+asyncpg
+python-dotenv
+passlib
+python-jose
+httpx
+pydantic[email]
+python-multipart 
