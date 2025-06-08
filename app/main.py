@@ -1,9 +1,9 @@
 import os
 from fastapi import FastAPI
 from dotenv import load_dotenv
-from db import db
-from users_router import router as users_router
-from qa_router import router as qa_router
+from app.core.db import db
+from app.routes.users_router import router as users_router
+from app.routes.qa_router import router as qa_router
 
 # Load environment variables from .env file
 load_dotenv()

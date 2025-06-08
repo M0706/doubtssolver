@@ -1,4 +1,4 @@
-from db import db
+from app.core.db import db
 from fastapi import HTTPException
 from datetime import datetime
 

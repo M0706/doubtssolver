@@ -1,6 +1,6 @@
 import asyncpg
-from db import db
-from utils import hash_password, verify_password
+from app.core.db import db
+from app.core.security import hash_password, verify_password
 from fastapi import HTTPException
 
 async def create_user(email: str, username: str, password: str):

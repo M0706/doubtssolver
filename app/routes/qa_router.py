@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import DoubtEntryCreate, DoubtEntryOut, UserProfile
-from utils import get_ai_response
-from users_router import get_current_user
-from services import qa_services
+from app.schemas import DoubtEntryCreate, DoubtEntryOut, UserProfile
+from app.services.ai_service import get_ai_response
+from app.routes.users_router import get_current_user
+from app.services import qa_services
 
 router = APIRouter()
 
