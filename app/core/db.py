@@ -1,6 +1,7 @@
 import os
 import asyncpg
-from env_vars import DATABASE_URL
+from fastapi import Path
+from app.core.config import DATABASE_URL
 
 class Database:
     def __init__(self):
@@ -22,7 +23,7 @@ class Database:
         return self.pool
 
     async def create_tables(self):
-        sql_path = os.path.join(os.path.dirname(__file__), 'models.sql')
+        sql_path = os.path.abspath("models.sql")
         with open(sql_path, 'r') as f:
             sql = f.read()
         async with self.pool.acquire() as conn:
