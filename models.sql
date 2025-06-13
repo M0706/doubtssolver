@@ -14,5 +14,6 @@ CREATE TABLE IF NOT EXISTS doubts (
     full_prompt_sent TEXT NOT NULL,
     ai_response TEXT NOT NULL,
     timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-    subject_category VARCHAR(50)
+    subject_category VARCHAR(50),
+    question_type VARCHAR(50)
 ); 
