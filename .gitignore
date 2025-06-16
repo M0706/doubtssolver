@@ -77,3 +77,8 @@ coverage.xml
 
 # Resources
 resources/doubtsolver.env 
+
+# Logs and runtime files
+logs/
+*.log
+*.log.*
