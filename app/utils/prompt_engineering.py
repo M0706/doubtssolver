@@ -1,28 +1,73 @@
 import json
+import asyncio
 
 from app.services.ai_service import get_ai_response
 
 
 
 async def infer_subject_and_type(question_text: str):
-    classification_prompt = f"""
-Given the following GMAT-style question, identify the most suitable subject category and question type.
-
-Question:
-\"\"\"{question_text}\"\"\"
-
-Respond in the following JSON format:
-{{
-  "subject_category": "...",
-  "question_type": "..."
-}}
-"""
-    classification_response = await get_ai_response(classification_prompt)
+    """
+    Try to classify question type, but gracefully handle failures
+    """
+    
+    # Try quick keyword classification first (no AI call needed)
+    keyword_result = keyword_classify(question_text)
+    if keyword_result and keyword_result[2] > 0.3:  # confidence > 0.3
+        return keyword_result[0], keyword_result[1]
+    
+    # Try AI classification with timeout
     try:
-        extracted = json.loads(classification_response)
-        return extracted.get("subject_category"), extracted.get("question_type")
-    except:
-        return None, None
+        classification_prompt = f"""
+GMAT question classification. Respond with only: CATEGORY|TYPE
+
+Examples:
+- Math problem → Quantitative|Problem Solving  
+- Reading passage → Verbal|Reading Comprehension
+- Grammar error → Verbal|Sentence Correction
+
+Question: {question_text}
+
+Response:"""
+        
+        # Use shorter timeout for classification
+        classification_response = await asyncio.wait_for(
+            get_ai_response(classification_prompt), 
+            timeout=10.0
+        )
+        
+        # Parse simple format
+        parts = classification_response.strip().split('|')
+        if len(parts) == 2:
+            return parts[0].strip(), parts[1].strip()
+            
+    except asyncio.TimeoutError:
+        print("Classification timed out, using fallback")
+    except Exception as e:
+        print(f"Classification failed: {e}")
+    
+    # Fallback to keyword classification or unknown
+    if keyword_result:
+        return keyword_result[0], keyword_result[1]
+    
+    return "Unknown", "Unknown"
+
+def keyword_classify(question_text: str):
+    """
+    Simple keyword-based classification fallback
+    """
+    text = question_text.lower()
+    
+    # Math indicators
+    math_keywords = ['equation', 'solve', 'calculate', 'x =', 'find x', 'algebra', 'geometry', 'formula']
+    if any(keyword in text for keyword in math_keywords):
+        return "Quantitative", "Problem Solving", 0.4
+        
+    # Reading indicators  
+    reading_keywords = ['passage', 'author', 'paragraph', 'according to', 'text states']
+    if any(keyword in text for keyword in reading_keywords):
+        return "Verbal", "Reading Comprehension", 0.4
+    
+    return None
 
 
 

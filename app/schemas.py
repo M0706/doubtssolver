@@ -55,10 +55,46 @@ class QuestionHistoryItem(BaseModel):
     subject_category: Optional[str] = None
     question_type: Optional[str] = None
     timestamp: datetime
+    
+    # Optional uncertainty fields (for admin/debugging)
+    confidence: Optional[float] = None
+    method: Optional[str] = None
+    needs_review: Optional[bool] = None
+    status: Optional[str] = None
 
 
 class HistoryResponse(BaseModel):
     questions: List[QuestionHistoryItem] = Field(..., description="List of previous questions and answers")
     total_count: int = Field(..., description="Total number of questions in history")
     limit: int = Field(..., description="Number of questions returned")
-    offset: int = Field(..., description="Number of questions skipped") 
+    offset: int = Field(..., description="Number of questions skipped")
+
+
+# Feedback Schemas
+class QuestionFeedback(BaseModel):
+    rating: int = Field(..., ge=1, le=5, description="Rating from 1-5")
+    feedback_text: Optional[str] = Field(None, max_length=1000, description="Optional feedback text")
+    classification_feedback: Optional[dict] = Field(None, description="Feedback on classification accuracy")
+
+
+class CacheFeedback(BaseModel):
+    feedback_type: str = Field(..., description="Type of feedback: helpful, wrong, irrelevant, partially_helpful")
+    feedback_text: Optional[str] = Field(None, max_length=500, description="Optional feedback text")
+
+
+# Admin/Analytics Schemas
+class QuestionStats(BaseModel):
+    total_questions: int
+    questions_by_category: dict
+    questions_by_confidence: dict
+    cache_hit_rate: float
+    review_queue_size: int
+
+
+class CacheStats(BaseModel):
+    total_entries: int
+    active_entries: int
+    disabled_entries: int
+    avg_usage_count: float
+    total_cache_hits: int
+    hit_rate_last_24h: float

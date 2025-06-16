@@ -14,6 +14,10 @@ class ExternalServices:
     OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
     OPENROUTER_CHAT_COMPLETIONS = f"{OPENROUTER_BASE_URL}/chat/completions"
     
+    # Gemini AI Service URLs
+    GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+    GEMINI_GENERATE_CONTENT = f"{GEMINI_BASE_URL}/models/gemini-2.0-flash:generateContent"
+    
     # Alternative AI Services (for future use)
     OPENAI_BASE_URL = "https://api.openai.com/v1"
     OPENAI_CHAT_COMPLETIONS = f"{OPENAI_BASE_URL}/chat/completions"
@@ -79,9 +83,29 @@ class DatabaseConstants:
 class AIServiceConstants:
     """AI service configuration constants"""
     
-    # Model configurations
-    DEFAULT_MODEL = "openai/gpt-3.5-turbo"
-    ALTERNATIVE_MODEL = "openai/gpt-4"
+    # AI Service Providers
+    PROVIDER_OPENROUTER = "openrouter"
+    PROVIDER_GEMINI = "gemini"
+    PROVIDER_OPENAI = "openai"
+    
+    # Default provider (can be changed via environment variable)
+    DEFAULT_PROVIDER = PROVIDER_GEMINI  # Changed from openrouter to gemini
+    
+    # Model configurations by provider
+    OPENROUTER_MODELS = {
+        "default": "openai/gpt-3.5-turbo",
+        "alternative": "openai/gpt-4"
+    }
+    
+    GEMINI_MODELS = {
+        "default": "gemini-2.0-flash",
+        "alternative": "gemini-1.5-pro"
+    }
+    
+    OPENAI_MODELS = {
+        "default": "gpt-3.5-turbo",
+        "alternative": "gpt-4"
+    }
     
     # Request parameters
     DEFAULT_TEMPERATURE = 0.7
@@ -228,6 +252,8 @@ class EnvironmentConstants:
     ENV_DATABASE_URL = "DATABASE_URL"
     ENV_SECRET_KEY = "SECRET_KEY"
     ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
+    ENV_GEMINI_API_KEY = "GEMINI_API_KEY"
+    ENV_AI_PROVIDER = "AI_PROVIDER"
     ENV_JWT_ALGORITHM = "JWT_ALGORITHM"
     ENV_ACCESS_TOKEN_EXPIRE_HOURS = "ACCESS_TOKEN_EXPIRE_HOURS"
 
@@ -279,6 +305,19 @@ def get_error_code(error_type: str) -> str:
     """Get standardized error code"""
     return getattr(ErrorCodes, error_type.upper(), ErrorCodes.INTERNAL_SERVER_ERROR)
 
-def get_ai_service_url() -> str:
-    """Get the current AI service URL"""
-    return ExternalServices.OPENROUTER_CHAT_COMPLETIONS 
+def get_ai_service_url(provider: str = None) -> str:
+    """Get the current AI service URL based on provider"""
+    import os
+    
+    if provider is None:
+        provider = os.getenv(EnvironmentConstants.ENV_AI_PROVIDER, AIServiceConstants.DEFAULT_PROVIDER)
+    
+    if provider == AIServiceConstants.PROVIDER_GEMINI:
+        return ExternalServices.GEMINI_GENERATE_CONTENT
+    elif provider == AIServiceConstants.PROVIDER_OPENROUTER:
+        return ExternalServices.OPENROUTER_CHAT_COMPLETIONS
+    elif provider == AIServiceConstants.PROVIDER_OPENAI:
+        return ExternalServices.OPENAI_CHAT_COMPLETIONS
+    else:
+        # Default fallback
+        return ExternalServices.GEMINI_GENERATE_CONTENT 

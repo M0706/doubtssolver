@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
-from app.schemas import QuestionRequest, QuestionResponse, HistoryResponse
-from app.services.qa_services import process_question, get_question_history
+from app.schemas import QuestionRequest, QuestionResponse, HistoryResponse, QuestionFeedback, CacheFeedback
+from app.services.enhanced_qa import process_question_with_uncertainty
+from app.services.qa_services import get_question_history
+from app.services.cache_service import cache_service
 from app.services.user_services import get_current_user
 from app.core.logging_config import get_logger
 from app.core.exceptions import (
@@ -93,12 +95,12 @@ async def ask_question(
                 }
             )
         
-        # Process the question through service layer
-        response = await process_question(
-            question=question_data.question.strip(),
-            subject_category=question_data.subject_category,
-            question_type=question_data.question_type,
-            user_id=user_id
+        # Process the question through enhanced service layer with uncertainty handling
+        response = await process_question_with_uncertainty(
+            question_text=question_data.question.strip(),
+            user_id=user_id,
+            user_category=question_data.subject_category,
+            user_type=question_data.question_type
         )
         
         logger.info(
