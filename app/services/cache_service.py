@@ -119,7 +119,7 @@ class QuestionCacheService:
         feedback_text: Optional[str] = None
     ):
         """
-        Handle user feedback on cached answers
+        Handle user feedback on cached answers with immediate invalidation for negative feedback
         """
         
         try:
@@ -150,8 +150,13 @@ class QuestionCacheService:
                         WHERE id = $1
                     """, cache_id)
                     
-                    # Check if we need to disable this cache entry
-                    await self._check_and_disable_cache(cache_id)
+                    # IMMEDIATE INVALIDATION: Any "wrong" feedback disables cache instantly
+                    if feedback_type == 'wrong':
+                        await self._disable_cache_immediately(cache_id, f"Immediate invalidation due to 'wrong' feedback from user {user_id}")
+                        logger.warning(f"Cache {cache_id} immediately disabled due to 'wrong' feedback")
+                    else:
+                        # Check if we need to disable this cache entry (for other negative feedback)
+                        await self._check_and_disable_cache(cache_id)
             
         except Exception as e:
             logger.error(f"Error handling cache feedback: {e}", exc_info=True)
@@ -355,6 +360,94 @@ class QuestionCacheService:
                 """, cache_id)
             
             logger.warning(f"Disabled cache entry {cache_id} due to negative feedback")
+
+    async def check_and_invalidate_repeat_question(
+        self, 
+        question_text: str, 
+        user_id: int, 
+        category: Optional[str] = None
+    ) -> bool:
+        """
+        Check if user has asked this question before and invalidate cache if so.
+        Returns True if cache was invalidated, False otherwise.
+        """
+        
+        try:
+            pool = await db.get_pool()
+            async with pool.acquire() as conn:
+                # Check if user has asked this exact question before (within last 24 hours)
+                previous_questions = await conn.fetch("""
+                    SELECT id, timestamp 
+                    FROM questions 
+                    WHERE user_id = $1 
+                    AND question_text = $2 
+                    AND timestamp > NOW() - INTERVAL '24 hours'
+                    ORDER BY timestamp DESC
+                    LIMIT 2
+                """, user_id, question_text)
+                
+                if len(previous_questions) >= 1:  # User has asked this before
+                    logger.info(f"User {user_id} is re-asking question: {question_text[:50]}...")
+                    
+                    # Find and disable related cache entries
+                    pattern_hash = self._generate_pattern_hash(question_text)
+                    keywords = self._extract_keywords(question_text)
+                    
+                    if category:
+                        cache_entries = await conn.fetch("""
+                            SELECT id, original_question_text 
+                            FROM question_cache 
+                            WHERE is_active = true
+                            AND (
+                                question_pattern_hash = $1  
+                                OR question_keywords && $2
+                                OR category = $3
+                            )
+                        """, pattern_hash, keywords, category)
+                    else:
+                        cache_entries = await conn.fetch("""
+                            SELECT id, original_question_text 
+                            FROM question_cache 
+                            WHERE is_active = true
+                            AND (
+                                question_pattern_hash = $1  
+                                OR question_keywords && $2
+                            )
+                        """, pattern_hash, keywords)
+                    
+                    for cache_entry in cache_entries:
+                        # Double-check similarity before disabling
+                        similarity = self._calculate_similarity(question_text, cache_entry['original_question_text'])
+                        if similarity > 0.8:  # High similarity threshold for re-asking detection
+                            await self._disable_cache_immediately(
+                                cache_entry['id'], 
+                                f"User {user_id} re-asked question - indicates dissatisfaction with cached answer"
+                            )
+                            logger.info(f"Disabled cache {cache_entry['id']} due to re-asking by user {user_id}")
+                    
+                    return len(cache_entries) > 0
+                
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error checking repeat questions: {e}", exc_info=True)
+            return False
+
+    async def _disable_cache_immediately(self, cache_id: int, reason: str):
+        """
+        Immediately disable a cache entry with reason
+        """
+        pool = await db.get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                UPDATE question_cache 
+                SET is_active = false, 
+                    disabled_reason = $2,
+                    disabled_at = NOW()
+                WHERE id = $1
+            """, cache_id, reason)
+            
+        logger.warning(f"Cache entry {cache_id} disabled: {reason}")
 
 # Global instance - this was missing!
 cache_service = QuestionCacheService()
