@@ -42,7 +42,7 @@ A reimplementation of the original Django-based doubt-solving backend using Fast
 
 4. **Run the application:**
     ```bash
-    uvicorn main:app --reload
+    uvicorn app.main:app --reload
     ```
 
 5. **API Endpoints:**

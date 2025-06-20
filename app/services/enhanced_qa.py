@@ -30,12 +30,12 @@ async def process_question_with_uncertainty(
     
     try:
         # Step 0: Check if user is re-asking the same question (invalidate cache if so)
-        cache_invalidated = await cache_service.check_and_invalidate_repeat_question(
-            question_text, user_id, user_category
-        )
+        # cache_invalidated = await cache_service.check_and_invalidate_repeat_question(
+        #     question_text, user_id, user_category
+        # )
         
-        if cache_invalidated:
-            logger.info(f"Cache invalidated due to repeat question from user {user_id}")
+        # if cache_invalidated:
+        #     logger.info(f"Cache invalidated due to repeat question from user {user_id}")
         
         # Step 1: Check cache first (only if not invalidated)
         cached_result = await cache_service.get_cached_response(
@@ -62,13 +62,13 @@ async def process_question_with_uncertainty(
         )
         
         # Step 3: Generate AI response (with context if cache was invalidated)
-        if cache_invalidated:
-            # Add context to prompt that user was unsatisfied with previous answer
-            ai_response = await generate_response_with_context(
-                question_text, classification, user_id, "previous_answer_unsatisfactory"
-            )
-        else:
-            ai_response = await generate_response(question_text, classification, user_id)
+        # if cache_invalidated:
+        #     # Add context to prompt that user was unsatisfied with previous answer
+        #     ai_response = await generate_response_with_context(
+        #         question_text, classification, user_id, "previous_answer_unsatisfactory"
+        #     )
+        # else:
+        ai_response = await generate_response(question_text, classification, user_id)
         
         # Step 4: Store in database
         question_id = await store_question(

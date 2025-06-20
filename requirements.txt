@@ -6,4 +6,5 @@ passlib
 python-jose
 httpx
 pydantic[email]
-python-multipart 
+python-multipart
+bcrypt 
